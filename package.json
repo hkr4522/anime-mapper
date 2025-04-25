@@ -1,0 +1,24 @@
+{
+  "name": "anilist-animepahe-mapper",
+  "version": "1.0.0",
+  "description": "API to map Anilist to AnimePahe",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js"
+  },
+  "dependencies": {
+    "@consumet/extensions": "github:consumet/consumet.ts",
+    "aniwatch": "^2.21.2",
+    "axios": "^1.8.4",
+    "cheerio": "^1.0.0",
+    "express": "^4.21.2",
+    "node-cache": "^5.1.2",
+    "node-fetch": "^3.3.2",
+    "string-similarity-js": "^2.1.4"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}
