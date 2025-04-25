@@ -91,7 +91,7 @@ Parameters:
 
 Example:
 ```
-GET /hianime/sources/one-piece-100?ep=2142&server=vidstreaming&category=sub
+GET /hianime/sources/one-piece-100?ep=2142&server=hd-1&category=sub
 ```
 
 ### AnimeKai Endpoints
