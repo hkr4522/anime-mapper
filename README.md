@@ -1,4 +1,4 @@
-# Anilist to AnimePahe Mapper API
+# Anilist to Anime Mapper API
 
 A specialized Node.js API that maps anime data between Anilist and streaming platforms (AnimePahe, HiAnime, AnimeKai) using advanced string similarity algorithms.
 
@@ -16,7 +16,7 @@ A specialized Node.js API that maps anime data between Anilist and streaming pla
 ```bash
 # Clone the repository
 git clone https://github.com/yourusername/anilist-animepahe-mapper.git
-cd anilist-animepahe-mapper
+cd anime-mapper
 
 # Install dependencies
 npm install
