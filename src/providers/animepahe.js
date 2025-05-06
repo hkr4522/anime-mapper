@@ -157,12 +157,15 @@ export class AnimePahe {
         }
       }
 
+      // Always sort episodes by number in ascending order, regardless of how the API returns them
+      const sortedEpisodes = [...episodes].sort((a, b) => a.number - b.number);
+
       return {
         title: animeTitle,
         session: session,
         totalEpisodes: jsonResult.total,
         details: animeDetails,
-        episodes: hasNextPage ? episodes : episodes.reverse(),
+        episodes: sortedEpisodes, // Return sorted episodes, always in ascending order
       };
     } catch (error) {
       console.error('Error recursively fetching episodes:', error.message);
