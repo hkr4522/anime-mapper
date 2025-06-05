@@ -234,7 +234,10 @@ app.get('/animepahe/hls/:anilistId/:episode', cache('15 minutes'), async (req, r
     const sources = await consumetAnimePahe.fetchEpisodeSources(targetEpisode.episodeId);
     
     // Return the sources directly
-    return res.status(200).json(sources);
+    return res.status(200).json({
+      sources: sources,
+      image: targetEpisode.image || ''
+    });
   } catch (error) {
     console.error('Error fetching HLS sources:', error.message);
     return res.status(500).json({ 
