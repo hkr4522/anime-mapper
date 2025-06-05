@@ -25,7 +25,8 @@ app.get('/', (req, res) => {
       '/hianime/servers/:episodeId - For example: /hianime/servers/one-piece-100?ep=2142',
       '/hianime/sources/:episodeId - optional params: ?ep=episodeId&server=serverName&category=sub|dub|raw',
       '/animekai/map/:anilistId',
-      '/animekai/sources/:episodeId - supports ?server and ?dub=true params'
+      '/animekai/sources/:episodeId - supports ?server and ?dub=true params',
+      '/animepahe/hls/:anilistId/:episode'
     ],
   });
 });
@@ -201,6 +202,44 @@ app.get('/animepahe/sources/:id', cache('15 minutes'), async (req, res) => {
     return res.status(500).json({ 
       error: error.message,
       message: 'Failed to fetch episode sources. If you receive a 403 error when accessing streaming URLs, add a Referer: "https://kwik.cx/" header to your requests.'
+    });
+  }
+});
+
+// Get HLS streaming links for a specific episode using Anilist ID and episode number
+app.get('/animepahe/hls/:anilistId/:episode', cache('15 minutes'), async (req, res) => {
+  try {
+    const { anilistId, episode } = req.params;
+    
+    if (!anilistId || !episode) {
+      return res.status(400).json({ error: 'Both AniList ID and episode number are required' });
+    }
+    
+    // First, get the mapping from Anilist to AnimePahe
+    const mappingResult = await mapAnilistToAnimePahe(anilistId);
+    
+    if (!mappingResult.animepahe || !mappingResult.animepahe.episodes || mappingResult.animepahe.episodes.length === 0) {
+      return res.status(404).json({ error: 'No episodes found for this anime on AnimePahe' });
+    }
+    
+    // Find the episode with the matching number
+    const targetEpisode = mappingResult.animepahe.episodes.find(ep => ep.number === parseInt(episode));
+    
+    if (!targetEpisode) {
+      return res.status(404).json({ error: `Episode ${episode} not found on AnimePahe` });
+    }
+    
+    // Now fetch the sources for this episode
+    const consumetAnimePahe = new ANIME.AnimePahe();
+    const sources = await consumetAnimePahe.fetchEpisodeSources(targetEpisode.episodeId);
+    
+    // Return the sources directly
+    return res.status(200).json(sources);
+  } catch (error) {
+    console.error('Error fetching HLS sources:', error.message);
+    return res.status(500).json({ 
+      error: error.message,
+      message: 'Failed to fetch HLS sources. If you receive a 403 error when accessing streaming URLs, add a Referer: "https://kwik.cx/" header to your requests.'
     });
   }
 });
