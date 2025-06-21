@@ -222,9 +222,20 @@ app.get('/animepahe/hls/:anilistId/:episode', cache('15 minutes'), async (req, r
       return res.status(404).json({ error: 'No episodes found for this anime on AnimePahe' });
     }
     
-    // Find the episode with the matching number
-    const targetEpisode = mappingResult.animepahe.episodes.find(ep => ep.number === parseInt(episode));
-    
+    // Try to find the episode with the exact number first (e.g., AnimePahe episode numbers)
+    let targetEpisode = mappingResult.animepahe.episodes.find(
+      ep => ep.number === parseInt(episode, 10)
+    );
+
+    if (!targetEpisode) {
+      const requestedIndex = parseInt(episode, 10) - 1; // convert to 0-based index
+      const episodesArr = mappingResult.animepahe.episodes;
+
+      if (requestedIndex >= 0 && requestedIndex < episodesArr.length) {
+        targetEpisode = episodesArr[requestedIndex];
+      }
+    }
+
     if (!targetEpisode) {
       return res.status(404).json({ error: `Episode ${episode} not found on AnimePahe` });
     }
