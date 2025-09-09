@@ -30,9 +30,17 @@ export function cache(duration) {
     
     // Override the json method to cache the response
     res.json = function(data) {
-      // Cache the data
-      console.log(`Caching response for: ${key}`);
-      apiCache.set(key, data);
+      try {
+        // Only cache successful responses (statusCode < 400)
+        if ((res.statusCode || 200) < 400) {
+          console.log(`Caching response for: ${key}`);
+          apiCache.set(key, data);
+        } else {
+          console.log(`Skip caching error for: ${key} (status ${res.statusCode})`);
+        }
+      } catch (e) {
+        console.warn(`Cache middleware error: ${e?.message || e}`);
+      }
       
       // Call the original json method
       return originalJson.call(this, data);
@@ -40,4 +48,4 @@ export function cache(duration) {
     
     next();
   };
-} 
+}

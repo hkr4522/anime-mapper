@@ -1,10 +1,9 @@
 import express from 'express';
 import { ANIME } from '@consumet/extensions';
-import { HiAnime } from 'aniwatch';
 import { mapAnilistToAnimePahe, mapAnilistToHiAnime, mapAnilistToAnimeKai } from './mappers/index.js';
 import { AniList } from './providers/anilist.js';
 import { AnimeKai } from './providers/animekai.js';
-import { getEpisodeServers } from './providers/hianime-servers.js';
+import { getEpisodeServers, getEpisodeSources } from './providers/hianime-servers.js';
 import { cache } from './utils/cache.js';
 
 const app = express();
@@ -86,7 +85,7 @@ app.get('/hianime/servers/:animeId', cache('15 minutes'), async (req, res) => {
   }
 });
 
-// Get streaming sources for HiAnime episode using AniWatch
+// Get streaming sources for HiAnime episode using local extractor
 app.get('/hianime/sources/:animeId', cache('15 minutes'), async (req, res) => {
   try {
     const { animeId } = req.params;
@@ -99,9 +98,8 @@ app.get('/hianime/sources/:animeId', cache('15 minutes'), async (req, res) => {
     // Combine animeId and ep to form the expected episodeId format
     const episodeId = `${animeId}?ep=${ep}`;
     
-    // Use the AniWatch library directly
-    const hianime = new HiAnime.Scraper();
-    const sources = await hianime.getEpisodeSources(episodeId, server, category);
+    // Use our local extractor which supports MegaCloud
+    const sources = await getEpisodeSources(episodeId, server, category);
     
     return res.json({
       success: true,

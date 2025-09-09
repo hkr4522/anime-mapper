@@ -6,7 +6,7 @@ export const client = axios.create({
     'Accept': 'application/json, text/plain, */*',
     'Accept-Language': 'en-US,en;q=0.9'
   },
-  timeout: 10000
+  timeout: 60000
 });
 
-export default client; 
+export default client;

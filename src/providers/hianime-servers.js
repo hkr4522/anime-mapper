@@ -110,7 +110,13 @@ export async function getEpisodeSources(episodeId, serverName = 'vidstreaming', 
       }
     );
 
-    // Return sources format similar to the AniWatch package
+    // If the target is a MegaCloud embed, extract the direct source URL
+    if (data?.link && /megacloud\./i.test(data.link)) {
+      const extracted = await extractFromMegaCloud(data.link);
+      return extracted;
+    }
+
+    // Return sources format similar to the AniWatch package for other hosts
     return {
       headers: {
         Referer: data.link,
@@ -119,7 +125,7 @@ export async function getEpisodeSources(episodeId, serverName = 'vidstreaming', 
       sources: [
         {
           url: data.link,
-          isM3U8: data.link.includes('.m3u8'),
+          isM3U8: data.link?.includes('.m3u8') || false,
         }
       ],
       subtitles: [],
@@ -128,6 +134,108 @@ export async function getEpisodeSources(episodeId, serverName = 'vidstreaming', 
     console.error('Error fetching episode sources:', error.message);
     throw error;
   }
+}
+
+// --- Helpers ---
+async function extractFromMegaCloud(embedUrl) {
+  // Parse domain for Referer
+  const urlObj = new URL(embedUrl);
+  const defaultDomain = `${urlObj.protocol}//${urlObj.host}`;
+
+  // Use a mobile UA to match site expectations
+  const mobileUA = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Mobile Safari/537.36";
+
+  // Load embed page HTML
+  const { data: html } = await client.get(embedUrl, {
+    responseType: 'text',
+    headers: {
+      Accept: '*/*',
+      'X-Requested-With': 'XMLHttpRequest',
+      Referer: defaultDomain,
+      'User-Agent': mobileUA,
+    },
+  });
+
+  const $ = load(html);
+
+  // Get file id from #megacloud-player
+  const videoTag = $('#megacloud-player');
+  const fileId = videoTag?.attr('data-id');
+  if (!fileId) {
+    throw new Error('MegaCloud: missing file id (possibly expired URL)');
+  }
+
+  // Extract nonce - either 48 chars or 3x16 concatenated
+  let nonce = null;
+  const nonceRegex48 = /\b[a-zA-Z0-9]{48}\b/;
+  const match48 = html.match(nonceRegex48);
+  if (match48) {
+    nonce = match48[0];
+  } else {
+    const match3x16 = html.match(/\b([a-zA-Z0-9]{16})\b[\s\S]*?\b([a-zA-Z0-9]{16})\b[\s\S]*?\b([a-zA-Z0-9]{16})\b/);
+    if (match3x16) nonce = `${match3x16[1]}${match3x16[2]}${match3x16[3]}`;
+  }
+  if (!nonce) {
+    throw new Error('MegaCloud: failed to capture nonce');
+  }
+
+  // Get decryption key from public repo
+  const { data: keyJson } = await client.get('https://raw.githubusercontent.com/yogesh-hacker/MegacloudKeys/refs/heads/main/keys.json', {
+    headers: { 'User-Agent': mobileUA }
+  });
+  const secret = keyJson?.mega;
+
+  // Try to get sources JSON
+  const { data: sourcesResp } = await client.get(`${defaultDomain}/embed-2/v3/e-1/getSources`, {
+    params: { id: fileId, _k: nonce },
+    headers: {
+      Accept: 'application/json, text/plain, */*',
+      Referer: defaultDomain,
+      'User-Agent': mobileUA,
+    }
+  });
+
+  let fileUrl = null;
+  if (Array.isArray(sourcesResp?.sources) && sourcesResp.sources[0]?.file) {
+    fileUrl = sourcesResp.sources[0].file;
+  } else if (sourcesResp?.sources) {
+    // Encrypted payload; use remote decoder
+    const decodeBase = 'https://script.google.com/macros/s/AKfycbxHbYHbrGMXYD2-bC-C43D3njIbU-wGiYQuJL61H4vyy6YVXkybMNNEPJNPPuZrD1gRVA/exec';
+    const params = new URLSearchParams({
+      encrypted_data: String(sourcesResp.sources),
+      nonce: nonce, // keep for compatibility if server expects this key
+      secret: String(secret || ''),
+    });
+    // Some servers expect 'nonce' as '_k' or 'nonce'; try both key names
+    if (!params.has('_k')) params.append('_k', nonce);
+
+    const { data: decodedText } = await client.get(`${decodeBase}?${params.toString()}`, {
+      responseType: 'text',
+      headers: { 'User-Agent': mobileUA }
+    });
+    const match = /\"file\":\"(.*?)\"/.exec(decodedText);
+    if (match) fileUrl = match[1].replace(/\\\//g, '/');
+  }
+
+  if (!fileUrl) {
+    throw new Error('MegaCloud: failed to extract file URL');
+  }
+
+  return {
+    headers: {
+      Referer: defaultDomain,
+      'User-Agent': mobileUA,
+    },
+    tracks: [],
+    intro: { start: 0, end: 0 },
+    outro: { start: 0, end: 0 },
+    sources: [
+      {
+        url: fileUrl,
+        isM3U8: /\.m3u8($|\?)/.test(fileUrl),
+      }
+    ],
+  };
 }
 
 export default {
