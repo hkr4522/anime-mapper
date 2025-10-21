@@ -3,7 +3,7 @@ import * as cheerio from 'cheerio';
 
 export class AnimePahe {
   constructor() {
-    this.baseUrl = "https://animepahe.ru";
+    this.baseUrl = "https://animepahe.si";
     this.sourceName = 'AnimePahe';
     this.isMulti = false;
   }
