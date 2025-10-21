@@ -108,7 +108,7 @@ export class AnimePahe {
         animeTitle = moreEpisodes.title;
         animeDetails = moreEpisodes.details || animeDetails;
       } else {
-        const detailUrl = `https://animepahe.ru/a/${jsonResult.data[0].anime_id}`;
+        const detailUrl = `https://animepahe.si/a/${jsonResult.data[0].anime_id}`;
         const newResponse = await axios.get(detailUrl, {
           headers: {
             'Cookie': "__ddg1_=;__ddg2_=;",
